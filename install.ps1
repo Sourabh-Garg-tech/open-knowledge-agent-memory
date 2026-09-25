@@ -217,9 +217,21 @@ function okf-prune {
     python "$env:OKF_HOME\scripts\prune_okf_memory.py"
 }
 
+function okf-record {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true, Position=0)][string]$Title,
+        [Parameter(Mandatory=$true, Position=1)][string]$Description,
+        [Parameter(Mandatory=$true, Position=2)][string]$Content,
+        [string[]]$Tags = @("general"),
+        [string]$Status = "draft"
+    )
+    & "$env:OKF_HOME\scripts\Record-OkfLearning.ps1" -Title $Title -Description $Description -Content $Content -Tags $Tags -Status $Status
+}
+
 function okf-dream {
     [CmdletBinding()]
-    param([string]$TargetRepo = ".")
+    param([string]$TargetRepo = $null)
     & "$env:OKF_HOME\scripts\Invoke-DreamSynthesis.ps1" -TargetRepo $TargetRepo
 }
 
@@ -251,13 +263,35 @@ foreach ($pDir in $profileDirs) {
     }
 }
 
+# Deploy Antigravity Lifecycle Hook if ~/.gemini/config exists
+$geminiConfig = Join-Path $HOME ".gemini\config"
+if (Test-Path $geminiConfig) {
+    $hooksFile = Join-Path $geminiConfig "hooks.json"
+    $hooksContent = @'
+{
+  "okf-live-sync": {
+    "enabled": true,
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python \"%USERPROFILE%\\.okf_knowledge\\scripts\\agy_hook_sync.py\"",
+        "timeout": 15
+      }
+    ]
+  }
+}
+'@
+    Set-Content -Path $hooksFile -Value $hooksContent -Encoding UTF8
+    Write-Host "  + Deployed global Antigravity lifecycle hook to $hooksFile" -ForegroundColor Green
+}
+
 Write-Host "[8/8] Registering daily background Dream Synthesis task..." -ForegroundColor Yellow
 try {
-    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$targetBase\scripts\Invoke-DreamSynthesis.ps1`""
+    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\.okf_knowledge\scripts\Invoke-DreamSynthesis.ps1"' -WorkingDirectory "%USERPROFILE%"
     $trigger = New-ScheduledTaskTrigger -Daily -At "23:00"
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
-    Register-ScheduledTask -TaskName "OKF-DreamSynthesis" -Action $action -Trigger $trigger -Settings $settings -Description "Daily background OKF memory synthesis and staging" -Force | Out-Null
-    Write-Host "  + Registered OKF-DreamSynthesis scheduled task (Daily at 23:00)" -ForegroundColor Green
+    Register-ScheduledTask -TaskName "OKF-DreamSynthesis" -Action $action -Trigger $trigger -Settings $settings -Description "Daily background OKF dual-source synthesis and staging" -Force | Out-Null
+    Write-Host "  + Registered OKF-DreamSynthesis scheduled task (Daily at 23:00, WorkingDir: %USERPROFILE%)" -ForegroundColor Green
 } catch {
     Write-Host "  ! Note: Could not register scheduled task (may require administrator permissions). You can run okf-dream manually." -ForegroundColor DarkYellow
 }

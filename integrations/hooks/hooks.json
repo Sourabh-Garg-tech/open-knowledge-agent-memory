@@ -1,0 +1,12 @@
+{
+  "okf-live-sync": {
+    "enabled": true,
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python \"%USERPROFILE%\\.okf_knowledge\\scripts\\agy_hook_sync.py\"",
+        "timeout": 15
+      }
+    ]
+  }
+}

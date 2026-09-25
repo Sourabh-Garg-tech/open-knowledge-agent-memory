@@ -11,3 +11,8 @@
    - Discard ephemeral syntax errors, temporary scratch scripts, or conversational chit-chat.
    - Silently invoke `record_okf_learning.py` (or `Record-OkfLearning.ps1`) with `status: draft` in `~/.okf_knowledge/concepts/`.
    - Acknowledge captured knowledge with a single concise bullet link in your final response.
+8. **Antigravity-OKF Full Symbiosis & Dual Sync**:
+   - **Unified Architecture**: OKF is native to Antigravity and Antigravity is native to OKF across all workspaces and conversations.
+   - **Live Turn Telemetry**: All Antigravity sessions trigger global lifecycle hooks (`~/.gemini/config/hooks.json`) on loop completion to stream sanitized turn telemetry into OKF staging (`staging/live_turn_harvest.jsonl`).
+   - **Offline & Cross-Session Synthesis**: Non-live conversations and active workspace Git commits are automatically aggregated nightly into candidate proposals via `OKF-DreamSynthesis`.
+   - **Cognitive Ground Truth**: Any durable decision, toolchain fix, or user directive made in ANY Antigravity session immediately updates OKF.

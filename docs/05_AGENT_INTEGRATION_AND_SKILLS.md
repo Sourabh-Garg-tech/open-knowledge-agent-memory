@@ -26,9 +26,19 @@ To enforce autonomous memory consultation, security sanitization, and the System
 ## Persistent Autonomous Memory & Reasoning Directives (OKF)
 1. **Auto-Consult Memory**: Before executing tasks that involve environment configs, toolchains, or previously solved patterns, automatically consult `~/.okf_knowledge/index.md` via the `okf-memory` skill.
 2. **Auto-Triad**: For high-complexity tasks (zero-downtime database migrations, financial reconciliation math, cryptographic protocols, major cross-system refactors), automatically invoke the `adversarial-triad` workflow ([ARCHITECT] -> [CRITIC] -> [JUDGE]) to audit the plan. Routine tasks run in single-pass mode.
-3. **Staged Trust Model**: All newly recorded concepts start as `status: draft`. Promotion to `status: verified` requires practical testing, and `status: stable` requires user confirmation.
-4. **Zero Secret & PII Leakage**: Always use `Sanitize-OkfContent.ps1` before saving nodes. Never store credentials, API tokens, passwords, or absolute machine paths.
+3. **Staged Trust Model**: All newly recorded concepts start as `status: draft`. Promotion to `status: verified` requires practical testing, and `status: stable` requires explicit confirmation.
+4. **Zero Secret & PII Leakage**: Always use `sanitize_okf.py` before saving nodes. Never store credentials, API tokens, passwords, or absolute machine paths.
 5. **Memory Tiering**: Active Warm Memory is soft-capped at 50 nodes in `~/.okf_knowledge/concepts/`. Stale nodes (>45 days) are archived to `archive/concepts/`. Staging candidates older than 14 days are auto-purged.
+6. **Epistemic Hierarchy**: Live User Instructions > Live Working Code & Tests > OKF Persistent Memory. If live code or tests contradict memory, memory yields and proposes an update.
+7. **Reflexive Turn Auto-Capture (Silent Invariant Ingestion)**: At the conclusion of any task that establishes a verified toolchain fix, environment workaround, core architecture rule, or explicit user preference:
+   - Discard ephemeral syntax errors, temporary scratch scripts, or conversational chit-chat.
+   - Silently invoke `record_okf_learning.py` (or `Record-OkfLearning.ps1`) with `status: draft` in `~/.okf_knowledge/concepts/`.
+   - Acknowledge captured knowledge with a single concise bullet link in your final response.
+8. **Antigravity-OKF Full Symbiosis & Dual Sync**:
+   - **Unified Architecture**: OKF is native to Antigravity and Antigravity is native to OKF across all workspaces and conversations.
+   - **Live Turn Telemetry**: All Antigravity sessions trigger global lifecycle hooks (`~/.gemini/config/hooks.json`) on loop completion to stream sanitized turn telemetry into OKF staging (`staging/live_turn_harvest.jsonl`).
+   - **Offline & Cross-Session Synthesis**: Non-live conversations and active workspace Git commits are automatically aggregated nightly into candidate proposals via `OKF-DreamSynthesis`.
+   - **Cognitive Ground Truth**: Any durable decision, toolchain fix, or user directive made in ANY Antigravity session immediately updates OKF.
 ```
 
 ---
@@ -60,12 +70,13 @@ This skill allows the agent to navigate Warm Memory and maintain concept nodes.
 4. Check `~/.okf_knowledge/staging/` to alert the user if candidate concepts await review.
 
 ## Recording New Knowledge
-When learning a persistent architectural convention, reusable command pattern, or user preference:
-1. Always propose the draft to the user before writing.
-2. Create the file using `~/.okf_knowledge/scripts/New-OkfNode.ps1` or `python scripts/new_okf_node.py`.
-3. New nodes enter as `status: draft` with `trust_score: 1`.
-4. Update `~/.okf_knowledge/index.md` with the new link.
-5. **Safety Rule:** Never record credentials, API keys, or absolute user directories.
+When learning a persistent architectural convention, reusable command pattern, toolchain fix, or user preference:
+1. **Invariant Filter:** Only record durable, reusable knowledge. Discard ephemeral typos, syntax errors, or one-off scratch scripts.
+2. **Autonomous Ingestion:** Execute `~/.okf_knowledge/scripts/Record-OkfLearning.ps1` (or `record_okf_learning.py`) with `Title`, `Description`, `Content`, and `Tags`.
+3. **Draft Trust State:** All newly captured nodes start as `status: draft` with `trust_score: 1`.
+4. **Automatic Indexing:** The ingestion script automatically updates `~/.okf_knowledge/index.md` and commits to Git.
+5. **Safety Invariant:** Always sanitized through the Shannon Entropy & Regex engine. Never record credentials, API tokens, or absolute user directories.
+6. **Receipt:** Include a single bullet link to the captured node in your final turn output.
 ```
 
 ---
@@ -153,16 +164,45 @@ For high-complexity tasks (e.g. distributed consensus, zero-downtime database mi
 
 ## 4. Human-in-the-Loop Developer CLI (okf-*)
 
-To inspect, query, and manage the knowledge graph without breaking developer focus or leaving the terminal, OKF provides high-speed native shell functions ($PROFILE or ~/.bashrc):
+To inspect, query, and manage the knowledge graph without breaking developer focus or leaving the terminal, OKF provides high-speed native shell functions (`$PROFILE` or `~/.bashrc`):
 
 | Command | Action | Use Case |
 | :--- | :--- | :--- |
-| okf-status | Displays terminal dashboard (Warm/Staging/Archive counts, capacity, Git status). | Daily check of knowledge graph health. |
-| okf-search "<query>" | Rapid grep across all concept notes with line numbers. | Finding previously solved architecture patterns. |
-| okf-new "<Title>" "[Desc]" | Scaffolds a schema-compliant node in concepts/. | Manually recording a new convention. |
-| okf-verify | Runs test_okf_graph.py graph validator & Shannon entropy scan. | Quality gate check before git pushes. |
-| okf-prune | Runs memory TTL pruning and archiving. | Maintaining warm memory soft cap (<= 50). |
-| okf-dream [repoPath] | Triggers background "Dream Synthesis" on recent git commits. | Distilling learnings from recent commits into staging. |
-| okf-open [concept] | Opens specific concept note or memory folder in editor. | Direct reading and manual edits. |
+| `okf-status` | Displays terminal dashboard (Warm/Staging/Archive counts, capacity, Git status). | Daily check of knowledge graph health. |
+| `okf-search "<query>"` | Rapid grep across all concept notes with line numbers. | Finding previously solved architecture patterns. |
+| `okf-record "<Title>" "<Desc>" "<Content>"` | **One-Shot Ingestion Engine:** Validates budget, sanitizes secrets, creates node, updates `index.md`, and commits to Git. | Autonomous or scripted invariant capture. |
+| `okf-new "<Title>" "[Desc]"` | Scaffolds a schema-compliant node in `concepts/`. | Manually recording a new convention. |
+| `okf-verify` | Runs `test_okf_graph.py` graph validator & Shannon entropy scan. | Quality gate check before git pushes. |
+| `okf-prune` | Runs memory TTL pruning and archiving. | Maintaining warm memory soft cap ($\le 50$). |
+| `okf-dream [repoPath]` | Triggers background "Dream Synthesis" across Git repos and Antigravity conversation transcripts. | Distilling cross-session learnings into staging. |
+| `okf-open [concept]` | Opens specific concept note or memory folder in editor. | Direct reading and manual edits. |
+
+---
+
+## 5. Antigravity Native Lifecycle Hook Integration (`hooks.json`)
+
+To enable **seamless, real-time live synchronization** between any active Antigravity session (CLI, 2.0, or IDE) and the OKF memory graph without requiring explicit prompt reminders, OKF deploys a native lifecycle hook to `~/.gemini/config/hooks.json`:
+
+```json
+{
+  "okf-live-sync": {
+    "enabled": true,
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python \"%USERPROFILE%\\.okf_knowledge\\scripts\\agy_hook_sync.py\"",
+        "timeout": 15
+      }
+    ]
+  }
+}
+```
+
+### Execution Flow:
+1. **Event:** On every loop termination (`Stop`), Antigravity pipes session telemetry (`conversationId`, `transcriptPath`, `workspacePaths`) to `agy_hook_sync.py` on `stdin`.
+2. **Analysis:** The script inspects recent turn steps, identifies user goals, modified files, and technical invariant signals.
+3. **Sanitization:** Content is filtered through Shannon Entropy ($H \le 4.3$) and path normalization.
+4. **Staging:** Telemetry is appended to `~/.okf_knowledge/staging/live_turn_harvest.jsonl`.
+5. **Non-Blocking Guarantee:** The hook returns `{}` on `stdout` in $<100\text{ ms}$, ensuring zero latency in the user chat experience.
 
 

@@ -74,7 +74,7 @@ EOF
 chmod +x "$TARGET_BASE/.git/hooks/pre-commit"
 echo "  + Installed Git pre-commit quality gate hook"
 
-echo "[5/6] Deploying agent skills (if Gemini/Antigravity present)..."
+echo "[5/6] Deploying agent skills and lifecycle hooks (if Gemini/Antigravity present)..."
 SKILLS_DIR="$HOME/.gemini/config/skills"
 if [ -d "$SCRIPT_DIR/integrations/skills" ]; then
     mkdir -p "$SKILLS_DIR"
@@ -86,6 +86,12 @@ if [ -d "$SCRIPT_DIR/integrations/skills" ]; then
             echo "  + Deployed skill: $skill_name"
         fi
     done
+fi
+
+GEMINI_CONFIG="$HOME/.gemini/config"
+if [ -d "$GEMINI_CONFIG" ] && [ -f "$SCRIPT_DIR/integrations/hooks/hooks.json" ]; then
+    cp "$SCRIPT_DIR/integrations/hooks/hooks.json" "$GEMINI_CONFIG/hooks.json"
+    echo "  + Deployed Antigravity lifecycle hook to $GEMINI_CONFIG/hooks.json"
 fi
 
 echo "[6/6] Verifying graph integrity..."
@@ -139,11 +145,15 @@ okf-prune() {
 }
 
 okf-dream() {
-    python3 "$OKF_HOME/scripts/prune_okf_memory.py"
+    python3 "$OKF_HOME/scripts/invoke_dream_synthesis.py"
 }
 
 okf-new() {
     python3 "$OKF_HOME/scripts/new_okf_node.py" "$1" "${2:-Autonomous learning entry.}"
+}
+
+okf-record() {
+    python3 "$OKF_HOME/scripts/record_okf_learning.py" "$1" "$2" "$3"
 }
 RC_EOF
     echo "  + Added CLI functions to $RC_FILE"
@@ -151,8 +161,8 @@ fi
 
 echo "[8/8] Registering daily background Dream Synthesis task..."
 if command -v crontab >/dev/null 2>&1; then
-    if ! crontab -l 2>/dev/null | grep -q "prune_okf_memory.py"; then
-        (crontab -l 2>/dev/null; echo "0 23 * * * python3 $TARGET_BASE/scripts/prune_okf_memory.py >/dev/null 2>&1") | crontab - 2>/dev/null || true
+    if ! crontab -l 2>/dev/null | grep -q "invoke_dream_synthesis.py"; then
+        (crontab -l 2>/dev/null; echo "0 23 * * * python3 $TARGET_BASE/scripts/invoke_dream_synthesis.py >/dev/null 2>&1") | crontab - 2>/dev/null || true
         echo "  + Registered daily cron task (23:00)"
     fi
 fi
@@ -162,4 +172,4 @@ echo "  SUCCESS: OKF Cognitive Memory System is 100% Deployed!   "
 echo "=========================================================="
 echo "Next Step: Add the directives block from integrations/directives/AGENTS.md"
 echo "to your system prompt or rules file (e.g. AGENTS.md, .cursorrules)."
-echo "Available CLI commands: okf-status, okf-search, okf-new, okf-verify, okf-prune, okf-dream"
+echo "Available CLI commands: okf-status, okf-search, okf-new, okf-record, okf-verify, okf-prune, okf-dream"

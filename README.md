@@ -153,6 +153,11 @@ flowchart TD
     CACHE --> LLM
 ```
 
+### 7. Native Antigravity Symbiosis & Dual-Loop Sync
+OKF is natively integrated with Google Antigravity (AGY) across two continuous loops:
+* **Online / Live Loop:** Global Antigravity lifecycle hooks (`~/.gemini/config/hooks.json`) trigger `agy_hook_sync.py` on loop completion (`Stop` event) across all interactive sessions. Extracts goals, files touched, and technical invariants into sanitized staging telemetry in $<100\text{ ms}$.
+* **Offline / Non-Live Loop:** The nightly `OKF-DreamSynthesis` engine scans both workspace Git commits and Antigravity conversation transcripts (`antigravity-cli` and `antigravity` 2.0/IDE) active in the last 24 hours to synthesize cross-session candidate proposals.
+
 ---
 
 ## 📂 Repository Structure
@@ -165,7 +170,13 @@ flowchart TD
 │   ├── sanitize_okf.py          # Shannon Entropy & Regex Sanitizer
 │   ├── test_okf_graph.py        # Graph Integrity Validator
 │   ├── prune_okf_memory.py      # Cold Archiving & 14-day Staging TTL Engine
-│   └── new_okf_node.py          # Schema-Compliant Node Generator
+│   ├── new_okf_node.py          # Schema-Compliant Node Generator
+│   ├── record_okf_learning.py   # One-Shot Autonomous Concept Ingestion Engine
+│   ├── Record-OkfLearning.ps1   # PowerShell Invariant Ingestion Engine
+│   ├── invoke_dream_synthesis.py# Dual-Source Dream Synthesis Engine (Git + Transcripts)
+│   ├── Invoke-DreamSynthesis.ps1# PowerShell Dream Synthesis Wrapper
+│   ├── agy_hook_sync.py         # Antigravity Lifecycle Hook Event Synchronizer
+│   └── Invoke-AgyHookSync.ps1   # PowerShell Lifecycle Hook Wrapper
 ├── starter_graph/               # Ready-to-deploy universal concept graph
 │   ├── index.md                 # Master Table of Contents
 │   └── concepts/                # Universal software architecture concepts
@@ -175,8 +186,9 @@ flowchart TD
 │       ├── database_migration_policy.md
 │       ├── distributed_caching_patterns.md
 │       └── llm_inference_routing.md
-├── integrations/                # Agent Skills, Directives, and Prompts
+├── integrations/                # Agent Skills, Directives, Hooks, and Prompts
 │   ├── directives/AGENTS.md     # Rules block for AGENTS.md / .cursorrules
+│   ├── hooks/hooks.json         # Turnkey Antigravity lifecycle hook
 │   ├── skills/                  # Native skills for Antigravity / Gemini CLI
 │   │   ├── okf-memory/SKILL.md
 │   │   └── adversarial-triad/SKILL.md
@@ -218,20 +230,22 @@ When deployed, the installer configures fast shell functions in your terminal (`
 | :--- | :--- |
 | `okf-status` | Displays the terminal dashboard (Warm/Staging/Archive counts, 50-node capacity status, Git sync state). |
 | `okf-search "<query>"` | Fast full-text grep across all concept notes and titles with line numbers and file grouping. |
+| `okf-record "<Title>" "<Desc>" "<Content>"` | **One-Shot Ingestion:** Budget-checks, sanitizes via Shannon entropy, creates concept, updates `index.md`, and commits to Git. |
 | `okf-new "<Title>" "[Desc]"` | Scaffolds a new schema-compliant node in `concepts/`. |
 | `okf-verify` | Runs `test_okf_graph.py` to check link integrity and Shannon entropy ($H > 4.3$). |
 | `okf-prune` | Manually triggers memory TTL pruning (archives $>45$d nodes, purges $>14$d staging candidates). |
-| `okf-dream [repoPath]` | Triggers background "Dream Synthesis" on recent git commits into `staging/`. |
+| `okf-dream [repoPath]` | Triggers background "Dream Synthesis" across Git repos and Antigravity conversation transcripts into `staging/`. |
 | `okf-open [concept]` | Opens a specific concept note or opens `~/.okf_knowledge` in your file explorer. |
 
 ---
 
-## 🌙 Autonomous Daily "Dream Synthesis"
+## 🌙 Autonomous Daily "Dream Synthesis" (Dual-Source)
 
-OKF includes a background distillation process that turns your daily git commits into structured staging concepts:
-* **Windows Scheduled Task:** Automatically registered as `OKF-DreamSynthesis` (runs daily at 23:00, hidden).
-* **Linux / macOS Cron:** Scheduled via standard `cron` (e.g. `0 23 * * *`).
-* **Zero Disruption:** Extracts recent commits, sanitizes secrets via Shannon entropy, and stages candidate proposals into `~/.okf_knowledge/staging/` governed by the 14-day auto-purge TTL.
+OKF includes a background distillation process that extracts and consolidates knowledge from both your code changes and AI conversations:
+* **Dual-Source Harvesting:** Automatically scans **workspace Git repositories** across `$HOME/Desktop` and **Antigravity conversation transcripts** across `~/.gemini/antigravity-cli/brain` and `~/.gemini/antigravity/brain` active in the last 24 hours.
+* **Windows Scheduled Task:** Automatically registered as `OKF-DreamSynthesis` (runs daily at 23:00 with `%USERPROFILE%` working directory).
+* **Linux / macOS Cron:** Scheduled via standard `cron` (e.g. `0 23 * * * python3 ~/.okf_knowledge/scripts/invoke_dream_synthesis.py`).
+* **Zero Disruption & 14d TTL:** Extracts recent commits and conversational technical resolutions, sanitizes secrets via Shannon entropy, stages proposals into `~/.okf_knowledge/staging/`, and automatically prunes candidates older than 14 days.
 
 
 ---

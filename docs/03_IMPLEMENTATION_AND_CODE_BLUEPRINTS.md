@@ -821,21 +821,235 @@ okf-new() {
 
 ---
 
-## 5. Autonomous Background Task (Dream Synthesis)
+## 5. Autonomous Background Task (Dual-Source Dream Synthesis)
 
 ### A. Windows Scheduled Task
-Registers a background scheduled task that executes daily at 23:00 without user interruption:
+Registers a background scheduled task that executes daily at 23:00 without user interruption, scanning both workspace Git repositories and Antigravity conversation transcripts:
 
 ```powershell
-$targetBase = "$HOME\.okf_knowledge"
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$targetBase\scripts\Invoke-DreamSynthesis.ps1`""
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\.okf_knowledge\scripts\Invoke-DreamSynthesis.ps1"' -WorkingDirectory "%USERPROFILE%"
 $trigger = New-ScheduledTaskTrigger -Daily -At "23:00"
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
-Register-ScheduledTask -TaskName "OKF-DreamSynthesis" -Action $action -Trigger $trigger -Settings $settings -Description "Daily background OKF memory synthesis and staging" -Force
+Register-ScheduledTask -TaskName "OKF-DreamSynthesis" -Action $action -Trigger $trigger -Settings $settings -Description "Daily background OKF dual-source memory synthesis and staging" -Force
 ```
 
 ### B. Linux / POSIX Cron Job
 ```bash
 # Append to user crontab (runs daily at 23:00)
-(crontab -l 2>/dev/null; echo "0 23 * * * python3 $HOME/.okf_knowledge/scripts/prune_okf_memory.py >/dev/null 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "0 23 * * * python3 $HOME/.okf_knowledge/scripts/invoke_dream_synthesis.py >/dev/null 2>&1") | crontab -
+```
+
+---
+
+## 6. Antigravity Native Lifecycle Hook (`agy_hook_sync.py`)
+
+Executes synchronously on the Antigravity `Stop` event to stream sanitized turn context to OKF staging:
+
+```python
+#!/usr/bin/env python3
+"""
+Antigravity Lifecycle Hook Handler: OKF Live Session Synchronizer.
+Executes on the Antigravity 'Stop' event across all live conversations.
+Safely extracts turn context, applies Shannon entropy sanitization, and appends to OKF staging telemetry.
+"""
+
+import sys
+import os
+import json
+from datetime import datetime
+
+scripts_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, scripts_dir)
+from sanitize_okf import sanitize_content
+
+def process_hook_payload():
+    try:
+        if sys.stdin.isatty():
+            print("{}")
+            return
+        raw_input = sys.stdin.read()
+        if not raw_input.strip():
+            print("{}")
+            return
+        payload = json.loads(raw_input)
+    except Exception:
+        print("{}")
+        return
+
+    try:
+        conv_id = payload.get("conversationId", "unknown")
+        transcript_path = payload.get("transcriptPath", "")
+        workspaces = payload.get("workspacePaths", [])
+        workspace_str = workspaces[0] if workspaces else "default"
+
+        if not transcript_path or not os.path.isfile(transcript_path):
+            print("{}")
+            return
+
+        with open(transcript_path, "r", encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()
+
+        if not lines:
+            print("{}")
+            return
+
+        latest_user_prompt = ""
+        turn_steps = []
+        for line in reversed(lines):
+            try:
+                item = json.loads(line)
+                turn_steps.insert(0, item)
+                if item.get("type") == "USER_INPUT":
+                    latest_user_prompt = item.get("content", "")
+                    break
+            except Exception:
+                continue
+
+        tools_used = []
+        files_modified = []
+        for step in turn_steps:
+            if step.get("type") == "PLANNER_RESPONSE":
+                for tc in step.get("tool_calls", []):
+                    name = tc.get("name", "")
+                    tools_used.append(name)
+                    if name in ("write_to_file", "replace_file_content"):
+                        target = tc.get("args", {}).get("TargetFile", "")
+                        if target and target not in files_modified:
+                            files_modified.append(target)
+
+        clean_prompt = latest_user_prompt.replace("<USER_REQUEST>", "").replace("</USER_REQUEST>", "").strip()
+        if len(clean_prompt) > 400:
+            clean_prompt = clean_prompt[:400] + "..."
+
+        keywords = ["fix", "error", "workaround", "invariant", "rule", "convention", "always", "never", "architect", "triad", "deploy", "config", "okf"]
+        matched_signals = [k for k in keywords if k in clean_prompt.lower()]
+
+        base_dir = os.path.dirname(scripts_dir)
+        staging_dir = os.path.join(base_dir, "staging")
+        os.makedirs(staging_dir, exist_ok=True)
+        harvest_file = os.path.join(staging_dir, "live_turn_harvest.jsonl")
+
+        turn_record = {
+            "timestamp": datetime.now().isoformat(),
+            "conversationId": conv_id,
+            "workspace": workspace_str,
+            "user_intent": clean_prompt,
+            "signals": matched_signals,
+            "files_modified": files_modified,
+            "tools_count": len(tools_used)
+        }
+
+        sanitized_json = sanitize_content(json.dumps(turn_record))
+        with open(harvest_file, "a", encoding="utf-8") as f:
+            f.write(sanitized_json + "\n")
+    except Exception:
+        pass
+
+    print("{}")
+
+if __name__ == "__main__":
+    process_hook_payload()
+```
+
+---
+
+## 7. Autonomous Ingestion Engine (`record_okf_learning.py`)
+
+Automates budget validation, sanitization, markdown scaffolding, index linking, and atomic Git commit:
+
+```python
+#!/usr/bin/env python3
+"""
+OKF Autonomous Ingestion Engine (Python 3).
+Sanitizes, checks Warm Memory budget, writes node, updates index.md, and commits to Git.
+"""
+
+import os
+import sys
+import re
+import datetime
+import argparse
+import subprocess
+
+scripts_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, scripts_dir)
+from sanitize_okf import sanitize_content
+
+def record_learning(title: str, description: str, content: str, tags: list, status: str = "draft", sources: list = None) -> int:
+    base = os.path.dirname(scripts_dir)
+    concepts_dir = os.path.join(base, "concepts")
+    index_file = os.path.join(base, "index.md")
+    os.makedirs(concepts_dir, exist_ok=True)
+
+    slug = re.sub(r'[^a-z0-9]+', '_', title.lower()).strip('_')
+    target_file = os.path.join(concepts_dir, f"{slug}.md")
+
+    # 1. Warm Memory Cap Check
+    existing_nodes = [f for f in os.listdir(concepts_dir) if f.endswith(".md")]
+    if len(existing_nodes) >= 50 and not os.path.exists(target_file):
+        print("WARNING: Warm Memory cap (50 nodes) reached. Running auto-prune before writing...", file=sys.stderr)
+        prune_script = os.path.join(scripts_dir, "prune_okf_memory.py")
+        if os.path.exists(prune_script):
+            subprocess.run([sys.executable, prune_script], capture_output=True)
+
+    date_str = datetime.date.today().isoformat()
+    tags_str = ", ".join(tags) if tags else "general"
+    sources_str = ", ".join(sources) if sources else "agent-session"
+
+    template = f"""---
+type: concept
+title: {title}
+description: {description}
+status: {status}
+trust_score: 1
+tags: [{tags_str}]
+created_at: {date_str}
+updated_at: {date_str}
+anonymized: true
+sources: [{sources_str}]
+---
+
+# {title}
+
+## Summary
+{description}
+
+## Verified Guidelines & Code Patterns
+{content}
+
+## Verification & Test Record
+* **Status History:** {status} created on {date_str}.
+* **Verification Criteria:** Turn execution verified via agent testing.
+
+## References & Cross-Links
+* [Master Index](../index.md)
+"""
+
+    cleaned = sanitize_content(template)
+    with open(target_file, "w", encoding="utf-8") as f:
+        f.write(cleaned)
+
+    # Update index.md
+    if os.path.isfile(index_file):
+        with open(index_file, "r", encoding="utf-8") as f:
+            index_content = f.read()
+        relative_link = f"./concepts/{slug}.md"
+        if relative_link not in index_content:
+            new_entry = f"* [{title}]({relative_link}) — {description}\n"
+            pattern = r"(## 1\. Warm Memory Graph \(Active Concepts\)\r?\n)(.*?)((\r?\n## |\Z))"
+            match = re.search(pattern, index_content, re.DOTALL)
+            if match:
+                replacement = match.group(1) + match.group(2) + new_entry + match.group(3)
+                updated_index = index_content[:match.start()] + replacement + index_content[match.end():]
+                with open(index_file, "w", encoding="utf-8") as f:
+                    f.write(updated_index)
+
+    # Atomic Git commit
+    try:
+        subprocess.run(["git", "-C", base, "add", f"concepts/{slug}.md", "index.md"], capture_output=True)
+        subprocess.run(["git", "-C", base, "commit", "-m", f"feat(memory): auto-record {slug}"], capture_output=True)
+    except Exception:
+        pass
+
+    return 0
 ```

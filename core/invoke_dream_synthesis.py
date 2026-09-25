@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-OKF Unified Dream Synthesis Engine (Dual-Source: Git Commits + Antigravity Transcripts).
+OKF Unified Dream Synthesis & Autonomous Distillation Engine.
 Scans active Git repositories and Antigravity conversation sessions (last 24h),
 extracts goals, tool executions, and resolutions, sanitizes with Shannon Entropy,
-and stages candidate proposals in staging/ with 14-day auto-TTL.
+and autonomously distills project learnings into Warm Memory (concepts/) and staging.
 """
 
 import os
@@ -11,7 +11,7 @@ import sys
 import json
 import re
 import subprocess
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 scripts_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, scripts_dir)
@@ -25,7 +25,6 @@ def harvest_git_commits(scan_root: str, hours: int = 24) -> list:
 
     cutoff_str = f"{hours} hours ago"
     for root, dirs, files in os.walk(scan_root):
-        # Exclude dependency/virtual environment folders
         dirs[:] = [d for d in dirs if d not in ("node_modules", ".venv", "venv", "__pycache__", ".git")]
         if ".git" in os.listdir(root):
             repo_name = os.path.basename(root)
@@ -53,7 +52,6 @@ def harvest_antigravity_transcripts(brain_dirs: list, hours: int = 24) -> list:
                 try:
                     mtime = os.path.getmtime(tpath)
                     if mtime >= cutoff_time:
-                        # Parse transcript (tpath is .../<conv_id>/.system_generated/logs/transcript.jsonl)
                         conv_id = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(tpath))))
                         user_requests = []
                         files_touched = set()
@@ -67,7 +65,6 @@ def harvest_antigravity_transcripts(brain_dirs: list, hours: int = 24) -> list:
                                         content = item.get("content", "")
                                         if content:
                                             clean = content.replace("<USER_REQUEST>", "").replace("</USER_REQUEST>", "").strip()
-                                            # Strip metadata block if present
                                             clean = clean.split("<ADDITIONAL_METADATA>")[0].strip()
                                             if clean and len(clean) > 5:
                                                 user_requests.append(clean[:200])
@@ -85,12 +82,97 @@ def harvest_antigravity_transcripts(brain_dirs: list, hours: int = 24) -> list:
                                 "conversation_id": conv_id,
                                 "source_brain": os.path.basename(os.path.dirname(bdir)),
                                 "last_active": datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M"),
-                                "requests": user_requests[-4:],  # Most recent 4 requests
+                                "requests": user_requests[-4:],
                                 "files": sorted(list(files_touched))[:6]
                             })
                 except Exception:
                     continue
     return results
+
+def auto_distill_project_concepts(base_dir: str, git_harvest: list) -> list:
+    """Autonomously updates or creates project concept nodes in concepts/ from recent commits."""
+    concepts_dir = os.path.join(base_dir, "concepts")
+    index_file = os.path.join(base_dir, "index.md")
+    updated_concepts = []
+
+    for item in git_harvest:
+        repo = item["repo"]
+        commits = item["commits"]
+        if not commits:
+            continue
+
+        slug = f"project_{re.sub(r'[^a-z0-9]+', '_', repo.lower()).strip('_')}"
+        target_file = os.path.join(concepts_dir, f"{slug}.md")
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        commit_bullets = "\n".join([f"- {c}" for c in commits[:8]])
+
+        if os.path.isfile(target_file):
+            try:
+                with open(target_file, "r", encoding="utf-8", errors="ignore") as f:
+                    existing = f.read()
+
+                first_hash = commits[0].split()[0]
+                if first_hash not in existing:
+                    update_section = f"\n\n### Autonomous Progress Update ({today})\n{commit_bullets}\n"
+                    updated_content = sanitize_content(existing + update_section)
+                    with open(target_file, "w", encoding="utf-8") as f:
+                        f.write(updated_content)
+                    updated_concepts.append(slug)
+            except Exception:
+                pass
+        else:
+            title = f"Project {repo.replace('_', ' ').replace('-', ' ').title()} Architecture"
+            desc = f"Autonomous project tracking and architectural patterns for {repo}."
+            template = f"""---
+type: concept
+title: {title}
+description: {desc}
+status: draft
+trust_score: 2
+tags: [project, {repo.lower()}]
+created_at: {today}
+updated_at: {today}
+anonymized: true
+sources: [git-history, dream-synthesis]
+---
+
+# {title}
+
+## Summary
+{desc}
+
+## Key Architecture & Recent Invariants
+{commit_bullets}
+
+## Verification & Trust Record
+* **Auto-Created:** Synthesized by OKF Dream Engine on {today}.
+
+## References & Cross-Links
+* [Master Index](../index.md)
+"""
+            cleaned = sanitize_content(template)
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(cleaned)
+
+            if os.path.isfile(index_file):
+                try:
+                    with open(index_file, "r", encoding="utf-8") as f:
+                        idx = f.read()
+                    rel_link = f"./concepts/{slug}.md"
+                    if rel_link not in idx:
+                        new_entry = f"* [{title}]({rel_link}) — {desc}\n"
+                        pattern = r"(## 1\. Warm Memory Graph \(Active Concepts\)\r?\n)(.*?)((\r?\n## |\Z))"
+                        m = re.search(pattern, idx, re.DOTALL)
+                        if m:
+                            replacement = m.group(1) + m.group(2) + new_entry + m.group(3)
+                            with open(index_file, "w", encoding="utf-8") as f:
+                                f.write(idx[:m.start()] + replacement + idx[m.end():])
+                except Exception:
+                    pass
+            updated_concepts.append(slug)
+
+    return updated_concepts
 
 def run_dream_synthesis() -> int:
     base = os.path.dirname(scripts_dir)
@@ -194,7 +276,12 @@ sources: [git-history, antigravity-transcripts]
         f.write(template)
     print(f"Created candidate synthesis: {candidate_file}")
 
-    # 4. Prune staging files older than 14 days (TTL)
+    # 4. Autonomous Warm Memory Distillation
+    distilled = auto_distill_project_concepts(base, git_harvest)
+    if distilled:
+        print(f"Autonomously distilled project concepts: {', '.join(distilled)}")
+
+    # 5. Prune staging files older than 14 days (TTL)
     cutoff_14d = datetime.now().timestamp() - (14 * 86400)
     for fname in os.listdir(staging):
         if fname.startswith("candidate_") and fname.endswith(".md"):
@@ -206,7 +293,7 @@ sources: [git-history, antigravity-transcripts]
             except Exception:
                 pass
 
-    # 5. Reset live telemetry buffer after successful synthesis
+    # 6. Reset live telemetry buffer after successful synthesis
     if os.path.isfile(telemetry_file):
         try:
             with open(telemetry_file, "w", encoding="utf-8") as f:
@@ -214,11 +301,11 @@ sources: [git-history, antigravity-transcripts]
         except Exception:
             pass
 
-    # 6. Commit to Git repository in .okf_knowledge
+    # 7. Commit to Git repository in .okf_knowledge
     try:
-        subprocess.run(["git", "-C", base, "add", "staging/"], capture_output=True)
-        subprocess.run(["git", "-C", base, "commit", "-m", f"chore(dream): unified synthesis for {now_str}"], capture_output=True)
-        print("Committed synthesis to .okf_knowledge repository.")
+        subprocess.run(["git", "-C", base, "add", "concepts/", "index.md", "staging/"], capture_output=True)
+        subprocess.run(["git", "-C", base, "commit", "-m", f"chore(dream): autonomous synthesis & distillation for {now_str}"], capture_output=True)
+        print("Committed synthesis and distillation to .okf_knowledge repository.")
     except Exception as e:
         print(f"Warning: git commit failed: {e}", file=sys.stderr)
 

@@ -229,6 +229,25 @@ function okf-record {
     & "$env:OKF_HOME\scripts\Record-OkfLearning.ps1" -Title $Title -Description $Description -Content $Content -Tags $Tags -Status $Status
 }
 
+function okf-review {
+    [CmdletBinding()]
+    param()
+    python "$env:OKF_HOME\scripts\promote_okf_candidate.py" --list
+}
+
+function okf-promote {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true, Position=0)][string]$Candidate,
+        [Parameter(Mandatory=$true, Position=1)][string]$Title,
+        [Parameter(Position=2)][string]$Description = "Promoted architectural concept.",
+        [string]$Content = "",
+        [string[]]$Tags = @("promoted"),
+        [string]$Status = "verified"
+    )
+    & "$env:OKF_HOME\scripts\Promote-OkfCandidate.ps1" -Candidate $Candidate -Title $Title -Description $Description -Content $Content -Tags $Tags -Status $Status
+}
+
 function okf-dream {
     [CmdletBinding()]
     param([string]$TargetRepo = $null)

@@ -155,6 +155,14 @@ okf-new() {
 okf-record() {
     python3 "$OKF_HOME/scripts/record_okf_learning.py" "$1" "$2" "$3"
 }
+
+okf-review() {
+    python3 "$OKF_HOME/scripts/promote_okf_candidate.py" --list
+}
+
+okf-promote() {
+    python3 "$OKF_HOME/scripts/promote_okf_candidate.py" --candidate "$1" --title "$2" --description "${3:-Promoted architectural concept.}"
+}
 RC_EOF
     echo "  + Added CLI functions to $RC_FILE"
 fi

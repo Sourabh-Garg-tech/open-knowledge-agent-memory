@@ -1,6 +1,7 @@
 # OKF: Open Knowledge Agent Memory & Adversarial Triad System
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![CI: Tests & Security Gate](https://github.com/Sourabh-Garg-tech/open-knowledge-agent-memory/actions/workflows/ci.yml/badge.svg)](https://github.com/Sourabh-Garg-tech/open-knowledge-agent-memory/actions/workflows/ci.yml)
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg)](https://python.org)
 [![Shell: PowerShell & POSIX](https://img.shields.io/badge/Shell-pwsh%20%7C%20bash-orange.svg)]()
 [![Zero Leakage: Shannon Entropy](https://img.shields.io/badge/Security-Shannon%20Entropy-purple.svg)]()
